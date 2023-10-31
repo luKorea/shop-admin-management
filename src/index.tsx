@@ -1,98 +1,65 @@
-import './style/global.less';
-import React, { useEffect } from 'react';
-import ReactDOM from 'react-dom';
-import { createStore } from 'redux';
-import { Provider } from 'react-redux';
-import { ConfigProvider } from '@arco-design/web-react';
-import zhCN from '@arco-design/web-react/es/locale/zh-CN';
-import enUS from '@arco-design/web-react/es/locale/en-US';
-import { BrowserRouter, Switch, Route } from 'react-router-dom';
-import axios from 'axios';
-import rootReducer from './store';
-import PageLayout from './layout';
-import { GlobalContext } from './context';
-import Login from './pages/login';
-import checkLogin from './utils/checkLogin';
-import changeTheme from './utils/changeTheme';
-import useStorage from './utils/useStorage';
-import './mock';
+import React, { Suspense, useEffect } from 'react'
+import ReactDOM from 'react-dom/client'
+import { HashRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
 
-const store = createStore(rootReducer);
+// arco-ui
+import { ConfigProvider } from '@arco-design/web-react'
+import zhCN from '@arco-design/web-react/es/locale/zh-CN'
+import enUS from '@arco-design/web-react/es/locale/en-US'
 
-function Index() {
-  const [lang, setLang] = useStorage('arco-lang', 'en-US');
-  const [theme, setTheme] = useStorage('arco-theme', 'light');
+// 自定义 hooks
+import { useChangeTheme, useStorage } from './hooks'
+import { GlobalContext } from './context/use-context'
+import store from './store'
 
-  function getArcoLocale() {
-    switch (lang) {
-      case 'zh-CN':
-        return zhCN;
-      case 'en-US':
-        return enUS;
-      default:
-        return zhCN;
-    }
-  }
+// 样式
+import 'normalize.css'
+import './assets/css/common.less'
 
-  function fetchUserInfo() {
-    store.dispatch({
-      type: 'update-userInfo',
-      payload: { userLoading: true },
-    });
-    axios.get('/api/user/userInfo').then((res) => {
-      store.dispatch({
-        type: 'update-userInfo',
-        payload: { userInfo: res.data, userLoading: false },
-      });
-    });
-  }
+import App from './App'
 
-  useEffect(() => {
-    if (checkLogin()) {
-      fetchUserInfo();
-    } else if (window.location.pathname.replace(/\//g, '') !== 'login') {
-      window.location.pathname = '/login';
-    }
-  }, []);
+import { ELocal, ETheme } from './types'
 
-  useEffect(() => {
-    changeTheme(theme);
-  }, [theme]);
-
+function FrontNode() {
+  const [lang, setLang] = useStorage('arco-lang', ELocal['zh-CN'])
+  const [theme, setTheme] = useStorage('arco-theme', ETheme.light)
   const contextValue = {
     lang,
     setLang,
     theme,
-    setTheme,
-  };
+    setTheme
+  }
+
+  // 暂时只配置两种语言
+  function getArcoLocale() {
+    return lang === ELocal['en-US'] ? enUS : zhCN
+  }
+
+  useEffect(() => {
+    useChangeTheme(theme as string)
+  }, [theme])
 
   return (
-    <BrowserRouter>
-      <ConfigProvider
-        locale={getArcoLocale()}
-        componentConfig={{
-          Card: {
-            bordered: false,
-          },
-          List: {
-            bordered: false,
-          },
-          Table: {
-            border: false,
-          },
-        }}
-      >
+    <React.StrictMode>
+      {/* UI 主题配置 */}
+      <ConfigProvider locale={getArcoLocale()}>
+        {/* react-redux */}
         <Provider store={store}>
+          {/* context */}
           <GlobalContext.Provider value={contextValue}>
-            <Switch>
-              <Route path="/login" component={Login} />
-              <Route path="/" component={PageLayout} />
-            </Switch>
+            {/* react-router */}
+            <Suspense fallback="">
+              <HashRouter>
+                <App />
+              </HashRouter>
+            </Suspense>
           </GlobalContext.Provider>
         </Provider>
       </ConfigProvider>
-    </BrowserRouter>
-  );
+    </React.StrictMode>
+  )
 }
 
-ReactDOM.render(<Index />, document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
+root.render(<FrontNode />)

@@ -1,43 +1,12 @@
-import defaultSettings from '../settings.json';
-export interface GlobalState {
-  settings?: typeof defaultSettings;
-  userInfo?: {
-    name?: string;
-    avatar?: string;
-    job?: string;
-    organization?: string;
-    location?: string;
-    email?: string;
-    permissions: Record<string, string[]>;
-  };
-  userLoading?: boolean;
-}
-
-const initialState: GlobalState = {
-  settings: defaultSettings,
-  userInfo: {
-    permissions: {},
-  },
-};
-
-export default function store(state = initialState, action) {
-  switch (action.type) {
-    case 'update-settings': {
-      const { settings } = action.payload;
-      return {
-        ...state,
-        settings,
-      };
-    }
-    case 'update-userInfo': {
-      const { userInfo = initialState.userInfo, userLoading } = action.payload;
-      return {
-        ...state,
-        userLoading,
-        userInfo,
-      };
-    }
-    default:
-      return state;
+import { configureStore } from '@reduxjs/toolkit'
+import userReducer from './module/user'
+const store = configureStore({
+  reducer: {
+    userReducer
   }
-}
+})
+
+export type IRootState = ReturnType<typeof store.getState>
+export type IDispatch = typeof store.dispatch
+
+export default store
